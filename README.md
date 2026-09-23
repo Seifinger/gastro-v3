@@ -7,11 +7,12 @@ Kompositionsbasierter Website-Generator für Gastronomiebetriebe. Er erzeugt sta
 - Node.js 22 oder neuer
 - `npm ci`
 - `.env.example` nach `.env` kopieren und mindestens `DASHBOARD_TOKEN` und `WIRT_SESSION_SECRET` setzen (lange, zufällige Werte)
+- Optional für den Prospect-Workflow (`/prospects`): `GOOGLE_PLACES_API_KEY` in `.env` setzen (Places API (New) + Abrechnung in Google Cloud aktivieren). Ohne Key liefert die Suche einen klaren Fehler, bevor eine Anfrage rausgeht.
 
 ## Befehle
 
 ```bash
-npm run dev       # Agentur-Dashboard auf 127.0.0.1:3000
+npm run dev       # Agentur-Dashboard (inkl. Prospect-Workflow unter /prospects) auf 127.0.0.1:3000
 npm run build     # alle JSON-Briefings in data/ zu docs/<slug>/ bauen (validiert + judge-geprüft)
 npm test          # node:test
 npm run publish   # baut nur freigegebene, judge-geprüfte Sites; Trockenlauf ohne --push

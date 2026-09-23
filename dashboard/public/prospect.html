@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gastro-v3 · Prospect-Workflow</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header>
+  <span class="wordmark">gastro-v3 / dashboard</span>
+  <nav>
+    <a href="/leads">Leads</a>
+    <a href="/prospects" aria-current="page">Prospects</a>
+    <a href="/neu">Neu</a>
+    <a href="/einstellungen">Einstellungen</a>
+  </nav>
+</header>
+<main>
+  <h1>Prospect-Workflow</h1>
+  <p class="lead">Google-Suche, transparentes Website-Scoring und lokale Konzeptdemos für die Neukundenansprache.</p>
+  <p class="hint">Die Websiteanalyse ist eine Heuristik (Stichwort-/Meta-Erkennung), keine geprüfte Tatsache — Ergebnisse vor einem Pitch selbst gegenprüfen.</p>
+
+  <div id="token-warning" class="status-msg error" role="alert" hidden>
+    Bitte zuerst unter <a href="/einstellungen">/einstellungen</a> den DASHBOARD_TOKEN speichern.
+  </div>
+
+  <section aria-label="Google-Suche">
+    <h2>Google-Suche</h2>
+    <label for="search-query">Suchanfrage</label>
+    <input id="search-query" type="text" value="Restaurants in Mühldorf am Inn">
+    <p>
+      <button id="search-button" type="button">Suchen</button>
+    </p>
+    <p id="search-status" class="status-msg" role="status" aria-live="polite" hidden></p>
+    <p id="search-attribution" class="hint" hidden>
+      Ergebnisse von <a href="https://www.google.com/maps" target="_blank" rel="noopener">Google Maps</a>
+    </p>
+    <div id="search-results" class="lead-list"></div>
+  </section>
+
+  <section aria-label="Importierte Prospects">
+    <h2>Importierte Prospects</h2>
+    <p id="prospect-status" class="status-msg" role="status" aria-live="polite" hidden></p>
+    <div id="prospect-list" class="lead-list"></div>
+  </section>
+</main>
+<script src="/prospect.js"></script>
+</body>
+</html>
