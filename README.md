@@ -16,6 +16,7 @@ npm run dev       # Agentur-Dashboard (inkl. Prospect-Workflow unter /prospects)
 npm run build     # alle JSON-Briefings in data/ zu docs/<slug>/ bauen (validiert + judge-geprüft)
 npm test          # node:test
 npm run publish   # baut nur freigegebene, judge-geprüfte Sites; Trockenlauf ohne --push
+npm run leads -- "Restaurants in Rosenheim" "Restaurants in Mühldorf am Inn"  # Google-Places-Suche über mehrere Regionen, gescort + sortiert + lokale Demo-Entwürfe, siehe GOOGLE-LEADS.md
 npm run migrate:v1  # liest V1_REPO_PATH lesend, schreibt nach data/migrated/
 npm run wirt      # Wirt-Portal auf Port 3001 (WIRT_PORT/HOST_WIRT)
 npm run check:google-places -- "Suchbegriff"  # manueller Live-Check gegen die echte Google-Places-API (nicht Teil von npm test)
