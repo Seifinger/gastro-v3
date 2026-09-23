@@ -8,3 +8,4 @@ docs/*
 !docs/.nojekyll
 data/runtime/
 data/*.local.json
+data/migrated/
