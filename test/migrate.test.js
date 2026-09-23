@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { migrate } from '../scripts/migrate-from-v1.js';
 import { validateBriefing } from '../src/briefing/validator.js';
+
+const rootDir = path.dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
 
 function fixtureBriefing(overrides = {}) {
   return {
@@ -63,7 +66,7 @@ test('migrate() reads v1 briefings read-only and writes v3-shaped output to data
     const entry = report[0];
     assert.equal(entry.valid, true, JSON.stringify(entry.schemaErrors));
 
-    const outPath = path.join(path.dirname(new URL('../package.json', import.meta.url).pathname), entry.out);
+    const outPath = path.join(rootDir, entry.out);
     const migrated = JSON.parse(await readFile(outPath, 'utf-8'));
 
     assert.equal(migrated.id, 'fixture-haus');
@@ -94,7 +97,7 @@ test('migrate() reads v1 briefings read-only and writes v3-shaped output to data
     assert.match(reportMd, /Manuell zu prüfen/);
   } finally {
     await rm(repo, { recursive: true, force: true });
-    await rm(path.join(path.dirname(new URL('../package.json', import.meta.url).pathname), 'data', 'migrated'), { recursive: true, force: true });
+    await rm(path.join(rootDir, 'data', 'migrated'), { recursive: true, force: true });
   }
 });
 
@@ -114,6 +117,6 @@ test('migrate() never writes into the v1 source repository (read-only)', async (
     assert.ok(!repoContents.some((f) => f.includes('migrated')));
   } finally {
     await rm(repo, { recursive: true, force: true });
-    await rm(path.join(path.dirname(new URL('../package.json', import.meta.url).pathname), 'data', 'migrated'), { recursive: true, force: true });
+    await rm(path.join(rootDir, 'data', 'migrated'), { recursive: true, force: true });
   }
 });

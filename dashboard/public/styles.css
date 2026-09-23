@@ -32,3 +32,11 @@ textarea{font-family:var(--mono);font-size:13px;min-height:220px;}
 .status-msg.ok{border-color:#2c5a2c;color:#2c5a2c;}
 .log-line{font-family:var(--mono);font-size:13px;padding:2px 0;}
 @media(max-width:600px){header{flex-direction:column;align-items:flex-start;}.lead-row{grid-template-columns:1fr;}}
+
+/* Prospect workflow */
+p.lead{font-size:18px;max-width:60ch;}
+p.hint{font-size:14px;color:#5a5648;max-width:60ch;}
+#search-results .lead-row,#prospect-list .lead-row{grid-template-columns:1fr auto;}
+#search-results .lead-row .actions,#prospect-list .lead-row .actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+#search-results .lead-row .actions a,#prospect-list .lead-row .actions a{font-family:var(--mono);font-size:13px;}
+#search-results .lead-row .meta,#prospect-list .lead-row .meta{font-family:var(--mono);font-size:13px;color:#5a5648;}

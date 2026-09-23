@@ -1,33 +1,205 @@
+// Prospect workflow: Google Places search -> import -> heuristic website
+// scoring -> optional local concept-demo preview. This file only wires
+// Express routes to data access, the Google Places call, website analysis
+// and scoring — the interactive UI itself lives in
+// dashboard/public/prospect.{html,js} (plain DOM code, no inline handlers,
+// no template-string JavaScript) per DECISIONS.md.
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import path from 'node:path';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createDashboardApp } from './server.js';
 import { requireDashboardToken } from './auth.js';
 import { PROSPECT_DEMO_VIDEO_URL } from '../src/blueprints/_shared/util.js';
-const root=join(dirname(fileURLToPath(import.meta.url)),'..'); const store=join(root,'data','runtime','prospects.json');
-const mask='places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount';
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function load(){try{return JSON.parse(await readFile(store,'utf8'));}catch(e){if(e.code==='ENOENT')return [];throw e;}}
-async function save(x){await mkdir(dirname(store),{recursive:true});await writeFile(store,JSON.stringify(x,null,2));}
-function score(p){if(!p.website)return {score:100,priority:'Sehr hoch – keine Website',reasons:['Keine Website hinterlegt']};const a=p.analysis;if(!a?.reachable)return {score:null,priority:'Zu prüfen',reasons:['Website nicht erreichbar oder Analyse fehlgeschlagen']};let n=0,r=[];for(const [ok,points,text] of [[a.order,25,'Keine Bestellfunktion erkannt'],[a.reserve,20,'Keine Reservierungsfunktion erkannt'],[a.mobile,25,'Kein mobiler Viewport erkannt'],[!a.outdated,20,'Veralteter Copyright-Footer'],[a.https,10,'Kein HTTPS']])if(!ok){n+=points;r.push(text)}return {score:n,priority:n>=80?'Sehr hoch':n>=50?'Hoch':n>=25?'Mittel':'Niedrig',reasons:r};}
-async function inspect(url){if(!url)return null;try{const r=await fetch(url,{redirect:'follow',signal:AbortSignal.timeout(8000),headers:{'User-Agent':'gastro-v3-prospect-review/1.0'}});if(!r.ok)return {reachable:false};const h=(await r.text()).toLowerCase();const has=x=>x.some(k=>h.includes(k));const yr=/(?:©|&copy;|copyright)\s*(\d{4})/i.exec(h);return {reachable:true,https:r.url.startsWith('https:'),mobile:/<meta[^>]+name=["']viewport/.test(h),order:has(['online bestellen','jetzt bestellen','lieferando','gloriafood','wolt','ubereats']),reserve:has(['tisch reservieren','jetzt reservieren','reservierung online','opentable','quandoo','resmio','aleno']),outdated:yr?new Date().getFullYear()-Number(yr[1])>=3:false};}catch{return {reachable:false};}}
-async function places(query){const key=process.env.GOOGLE_PLACES_API_KEY;if(!key)throw Error('GOOGLE_PLACES_API_KEY fehlt.');if(!query||query.length<3)throw Error('Suchbegriff ist zu kurz.');const r=await fetch('https://places.googleapis.com/v1/places:searchText',{method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,'X-Goog-FieldMask':mask},body:JSON.stringify({textQuery:query,pageSize:20}),signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Google Places HTTP '+r.status);const seen=new Set();return (await r.json()).places?.filter(x=>x.id&&!seen.has(x.id)&&seen.add(x.id)).map(x=>({placeId:x.id,name:x.displayName?.text||'',adresse:x.formattedAddress||'',telefon:x.nationalPhoneNumber||'',website:x.websiteUri||'',rating:x.rating??null,bewertungen:x.userRatingCount??null}))||[];}
-function page(){return `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Prospects</title><link rel=stylesheet href=/styles.css><main><p><a href=/leads>← Leads</a></p><h1>Prospect-Workflow</h1><p>Google-Suche, transparentes Website-Scoring und lokale Konzeptdemos. Die Analyse ist eine Heuristik; prüfe Ergebnisse vor einem Pitch.</p><input id=q value="Restaurants in Mühldorf am Inn"><button id=find>Suchen</button><p id=msg></p><div id=results></div><h2>Importierte Prospects</h2><div id=list></div></main><script>const $=x=>document.getElementById(x),token=()=>localStorage.getItem('gastro-v3-dashboard-token')||'';async function api(p,b){let r=await fetch('/api/prospects/'+p,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify(b||{})});let j=await r.json();if(!r.ok)throw Error(j.error);return j}function e(s){return String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}async function list(){try{let a=await api('list');$('list').innerHTML=a.map(x=>'<article class=lead-row><b>'+e(x.name)+'</b><br>'+e(x.adresse)+'<br><b>'+e(x.scoring.priority)+'</b> '+(x.scoring.score??'')+' · '+e(x.scoring.reasons.join(', '))+'<p><button onclick="an(\''+x.placeId+'\')">Website analysieren</button> <button onclick="demo(\''+x.placeId+'\')">Lokale Demo bauen</button> <a target=_blank href="/prospect-preview/'+encodeURIComponent(x.placeId)+'">Preview</a></p></article>').join('')}catch(x){$('list').textContent=x.message}}window.an=async id=>{await api('analyze/'+encodeURIComponent(id));list()};window.demo=async id=>{await api('demo/'+encodeURIComponent(id));list()};$('find').onclick=async()=>{try{let a=await api('search',{query:$('q').value});$('results').innerHTML=a.map(x=>'<article class=lead-row><b>'+e(x.name)+'</b><br>'+e(x.adresse)+' · '+(x.website?'Website':'keine Website')+'<p><button onclick="imp(\''+x.placeId+'\')">Importieren</button></p></article>').join('');window.found=a}catch(x){$('msg').textContent=x.message}};window.imp=async id=>{let x=found.find(x=>x.placeId===id);await api('import',{prospect:x});list()};list()</script>`}
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.join(__dirname, '..');
+let storeFile = path.join(root, 'data', 'runtime', 'prospects.json');
+
+// Test-only seam (mirrors src/wirt/store.js's setRuntimeDir): lets tests
+// point the prospect store at a throwaway file instead of the real
+// data/runtime/prospects.json.
+export function setProspectStoreFile(file) {
+  storeFile = file;
+}
+
+const FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount';
+const MAX_RESULTS = 20;
+const ANALYSIS_TIMEOUT_MS = 8000;
+const ANALYSIS_CONCURRENCY = 5;
+const OUTDATED_YEARS = 3;
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+async function loadProspects() {
+  try {
+    return JSON.parse(await readFile(storeFile, 'utf-8'));
+  } catch (err) {
+    if (err.code === 'ENOENT') return [];
+    throw err;
+  }
+}
+
+async function saveProspects(list) {
+  await mkdir(path.dirname(storeFile), { recursive: true });
+  await writeFile(storeFile, `${JSON.stringify(list, null, 2)}\n`, 'utf-8');
+}
+
+// Exact rules from the brief: no website is the strongest signal (100,
+// "Sehr hoch"); an unreachable/unanalyzed website is never scored high or
+// low by guessing, it is reported as "Zu prüfen" instead; a reachable site
+// accumulates points for each missing capability.
+export function scoreProspect(prospect) {
+  if (!prospect.website) {
+    return { score: 100, priority: 'Sehr hoch – keine Website', reasons: ['Keine Website hinterlegt'] };
+  }
+  const analysis = prospect.analysis;
+  if (!analysis?.reachable) {
+    return { score: null, priority: 'Zu prüfen', reasons: ['Website nicht erreichbar oder Analyse fehlgeschlagen'] };
+  }
+
+  const checks = [
+    [analysis.order, 25, 'Keine Bestellfunktion erkannt'],
+    [analysis.reserve, 20, 'Keine Reservierungsfunktion erkannt'],
+    [analysis.mobile, 25, 'Kein mobiler Viewport erkannt'],
+    [!analysis.outdated, 20, 'Veralteter Copyright-Footer (3+ Jahre)'],
+    [analysis.https, 10, 'Kein HTTPS'],
+  ];
+  let score = 0;
+  const reasons = [];
+  for (const [ok, points, reason] of checks) {
+    if (!ok) { score += points; reasons.push(reason); }
+  }
+  const priority = score >= 80 ? 'Sehr hoch' : score >= 50 ? 'Hoch' : score >= 25 ? 'Mittel' : 'Niedrig';
+  return { score, priority, reasons };
+}
+
+const ORDER_KEYWORDS = ['online bestellen', 'jetzt bestellen', 'lieferando', 'gloriafood', 'wolt', 'ubereats'];
+const RESERVE_KEYWORDS = ['tisch reservieren', 'jetzt reservieren', 'reservierung online', 'opentable', 'quandoo', 'resmio', 'aleno'];
+
+// Plain, honest GET request only: no login/paywall bypass, no robots.txt
+// bypass, no headless-browser scraping. Findings are heuristic keyword/meta
+// checks on the fetched HTML, never presented as verified facts by the
+// caller (the UI labels this explicitly).
+export async function analyzeWebsite(url, { request = fetch } = {}) {
+  if (!url) return null;
+  try {
+    const res = await request(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(ANALYSIS_TIMEOUT_MS),
+      headers: { 'User-Agent': 'gastro-v3-prospect-review/1.0 (+https://github.com/Seifinger/gastro-v3)' },
+    });
+    if (!res.ok) return { reachable: false };
+    const html = (await res.text()).toLowerCase();
+    const hasAny = (keywords) => keywords.some((k) => html.includes(k));
+    const yearMatch = /(?:©|&copy;|copyright)\s*(\d{4})/i.exec(html);
+    const outdated = yearMatch ? new Date().getFullYear() - Number(yearMatch[1]) >= OUTDATED_YEARS : false;
+    return {
+      reachable: true,
+      https: (res.url || url).startsWith('https:'),
+      mobile: /<meta[^>]+name=["']viewport/i.test(html),
+      order: hasAny(ORDER_KEYWORDS),
+      reserve: hasAny(RESERVE_KEYWORDS),
+      outdated,
+    };
+  } catch {
+    return { reachable: false };
+  }
+}
+
+// A small semaphore so that even if several analyze requests land at once
+// (multiple browser tabs, fast double-clicks before the button disables),
+// at most ANALYSIS_CONCURRENCY website fetches run concurrently.
+function createLimiter(maxConcurrent) {
+  let active = 0;
+  const queue = [];
+  const runNext = () => {
+    if (active >= maxConcurrent || queue.length === 0) return;
+    active += 1;
+    const { fn, resolve, reject } = queue.shift();
+    fn().then(resolve, reject).finally(() => { active -= 1; runNext(); });
+  };
+  return (fn) => new Promise((resolve, reject) => { queue.push({ fn, resolve, reject }); runNext(); });
+}
+const limitAnalysis = createLimiter(ANALYSIS_CONCURRENCY);
+
+// Costs money per call, so it fails fast (missing key, too-short query)
+// before ever touching the network, and never leaks the key to the client.
+export async function searchGooglePlaces(query, { key = process.env.GOOGLE_PLACES_API_KEY, request = fetch } = {}) {
+  if (!key) throw new Error('GOOGLE_PLACES_API_KEY fehlt. Trage ihn in .env ein und starte den Server neu.');
+  if (typeof query !== 'string' || query.trim().length < 3) {
+    throw new Error('Suchbegriff ist zu kurz (mindestens 3 Zeichen).');
+  }
+
+  let res;
+  try {
+    res = await request('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': FIELD_MASK },
+      body: JSON.stringify({ textQuery: query.trim(), pageSize: MAX_RESULTS }),
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (err) {
+    throw new Error(`Netzwerk- oder Timeoutfehler bei der Google-Places-Anfrage: ${err.message}`);
+  }
+
+  // Google returns JSON error bodies ({"error":{"code","message","status"}})
+  // on both success and failure responses, but a proxy/gateway in front of
+  // the API can return a non-JSON body (HTML error page, empty body) on
+  // failure. Parse defensively either way rather than letting a raw
+  // SyntaxError from res.json() surface as the user-facing message.
+  const rawText = await res.text();
+  let body = {};
+  if (rawText) {
+    try { body = JSON.parse(rawText); } catch { body = {}; }
+  }
+
+  if (!res.ok) {
+    const googleMessage = body?.error?.message;
+    if (res.status === 403) {
+      throw new Error(`HTTP 403: Google-Places-API-Zugriff verweigert. API-Key, API-Freigabe und Abrechnung prüfen.${googleMessage ? ` (${googleMessage})` : ''}`);
+    }
+    if (res.status === 429) {
+      throw new Error(`HTTP 429: Google-Places-Kontingent (Quota) erreicht. Später erneut versuchen.${googleMessage ? ` (${googleMessage})` : ''}`);
+    }
+    throw new Error(`Google Places antwortet mit HTTP ${res.status}.${googleMessage ? ` ${googleMessage}` : ''}`);
+  }
+
+  const seen = new Set();
+  return (Array.isArray(body.places) ? body.places : [])
+    .filter((p) => p && typeof p.id === 'string' && p.id && !seen.has(p.id) && seen.add(p.id))
+    .slice(0, MAX_RESULTS)
+    .map((p) => ({
+      placeId: p.id,
+      name: p.displayName?.text || '',
+      adresse: p.formattedAddress || '',
+      telefon: p.nationalPhoneNumber || '',
+      website: p.websiteUri || '',
+      rating: typeof p.rating === 'number' ? p.rating : null,
+      bewertungen: typeof p.userRatingCount === 'number' ? p.userRatingCount : null,
+    }));
+}
+
 // The local prospect-concept-demo hero: same cinematic dark video-hero art
 // direction as the hero-video blueprint (fullbleed video/poster, neutral
 // dark scrim, liquid-glass nav pill, top-oriented headline block), but this
-// route never goes through validateBriefing/compose/renderSite — it is a
+// function never goes through validateBriefing/compose/renderSite — it is a
 // separate, hand-authored page specifically so the temporary demo video
 // (PROSPECT_DEMO_VIDEO_URL) can never leak into a real customer build. No
 // confirmed USP/menu/photos exist yet for a prospect, so the copy stays a
 // neutral, non-factual concept statement, and the concept-draft marker is
-// always shown above the hero, never optional.
-function demoHeroPage(p){
-  const region = p.adresse?.split(',').at(-1)?.trim() || 'Ihrer Region';
+// always shown above the hero, never optional. Only the prospect's name and
+// the region derived from its address are ever interpolated — no phone
+// number, rating or review count from Google Places reaches this page.
+function renderDemoPreview(prospect) {
+  const region = prospect.adresse?.split(',').at(-1)?.trim() || 'Ihrer Region';
   return `<!doctype html>
 <meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
-<title>${esc(p.name)} · Konzeptentwurf</title>
+<title>${escapeHtml(prospect.name)} · Konzeptentwurf</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -45,28 +217,28 @@ body{margin:0;font:17px/1.6 Georgia,'Times New Roman',serif;color:#fff;backgroun
 .gv-eyebrow{font:600 13px/1.4 Arial,sans-serif;text-transform:uppercase;letter-spacing:.12em;opacity:.8;margin:0 0 12px}
 .gv-hero h1{font-size:clamp(40px,8vw,84px);line-height:1.05;margin:0 0 16px}
 .gv-lead{font-size:19px;max-width:44ch;color:#f2efe8;margin:0 0 32px}
-.gv-hero button{padding:16px 28px;background:#8b432d;color:#fff;border:0;font:600 16px/1 Arial,sans-serif;border-radius:2px;cursor:pointer}
-.gv-hero button:hover{background:#a04f34}
+.gv-hero .cta{display:inline-block;padding:16px 28px;background:#8b432d;color:#fff;text-decoration:none;font:600 16px/1 Arial,sans-serif;border-radius:2px;cursor:pointer}
+.gv-hero .cta:hover{background:#a04f34}
 .gv-note{padding:32px 6vw 64px;max-width:640px;font-size:15px;opacity:.85}
 :focus-visible{outline:3px solid #d98a63;outline-offset:3px}
 </style>
 <header class="gv-marker">UNVERBINDLICHER KONZEPTENTWURF – NICHT DIE OFFIZIELLE WEBSITE</header>
-<section class="gv-hero" aria-label="${esc(p.name)}">
+<section class="gv-hero" aria-label="${escapeHtml(prospect.name)}">
   <div class="gv-media">
     <div class="gv-poster"></div>
     <video autoplay muted loop playsinline aria-hidden="true" data-demo-video>
-      <source src="${esc(PROSPECT_DEMO_VIDEO_URL)}" type="video/mp4">
+      <source src="${escapeHtml(PROSPECT_DEMO_VIDEO_URL)}" type="video/mp4">
     </video>
   </div>
-  <p class="gv-nav gv-glass">${esc(p.name)}</p>
+  <p class="gv-nav gv-glass">${escapeHtml(prospect.name)}</p>
   <div class="gv-inner">
-    <p class="gv-eyebrow">Konzeptentwurf · ${esc(region)}</p>
-    <h1>${esc(p.name)}</h1>
+    <p class="gv-eyebrow">Konzeptentwurf · ${escapeHtml(region)}</p>
+    <h1>${escapeHtml(prospect.name)}</h1>
     <p class="gv-lead">Ein klarer digitaler Auftritt, der Gäste vom ersten Eindruck bis zur Anfrage führt.</p>
-    <button type="button">Konzeptgespräch anfragen</button>
+    <a class="cta" href="mailto:?subject=${encodeURIComponent(`Konzeptgespräch: ${prospect.name}`)}">Konzeptgespräch anfragen</a>
   </div>
 </section>
-<p class="gv-note">Diese lokale Demo verwendet keine übernommenen Fotos, Rezensionen, Preise oder Betriebsbehauptungen. Das Video ist ein temporäres, unternehmensfremdes Platzhaltermotiv für dieses Konzeptgespräch, kein Material dieses Betriebs, und wird nie in einer echten Kundensite oder einem veröffentlichten Build verwendet. Vor einer Veröffentlichung ersetzt ein bestätigtes Kundenvideo oder -foto diesen Platzhalter, und Inhalte, Rechte und Freigaben werden geprüft.</p>
+<p class="gv-note">Diese lokale Demo ist ein unverbindlicher Gestaltungsvorschlag der Agentur. Sie verwendet keine übernommenen Fotos, Rezensionen, Bewertungen, Preise, Öffnungszeiten oder sonstigen unbestätigten Betriebsfakten. Das Video ist ein temporäres, unternehmensfremdes Platzhaltermotiv für dieses Konzeptgespräch, kein Material dieses Betriebs, und wird nie in einer echten Kundensite oder einem veröffentlichten Build verwendet. Vor einer echten Veröffentlichung sind Inhalte, Bildrechte und Freigaben mit dem Betrieb zu klären; ein bestätigtes Kundenvideo oder -foto ersetzt diesen Platzhalter. Diese Seite fließt nicht in den automatischen Website-Build oder die GitHub-Pages-Veröffentlichung ein.</p>
 <script>
 (function(){
   var v = document.querySelector('[data-demo-video]');
@@ -82,5 +254,67 @@ body{margin:0;font:17px/1.6 Georgia,'Times New Roman',serif;color:#fff;backgroun
 </script>`;
 }
 
-export function createProspectApp(){const app=createDashboardApp();app.get('/prospects',(q,r)=>r.type('html').send(page()));app.get('/prospect-preview/:id',async(q,r)=>{const p=(await load()).find(x=>x.placeId===q.params.id);if(!p)return r.status(404).send('Nicht gefunden');r.type('html').send(demoHeroPage(p))});app.post('/api/prospects/search',requireDashboardToken,async(q,r)=>{try{r.json(await places(q.body.query))}catch(e){r.status(400).json({error:e.message})}});app.post('/api/prospects/list',requireDashboardToken,async(q,r)=>r.json((await load()).map(x=>({...x,scoring:score(x)})).sort((a,b)=>(b.scoring.score??-1)-(a.scoring.score??-1))));app.post('/api/prospects/import',requireDashboardToken,async(q,r)=>{const x=q.body.prospect;if(!x?.placeId||!x.name)return r.status(400).json({error:'Ungültiger Treffer'});const a=await load();if(a.some(p=>p.placeId===x.placeId))return r.status(409).json({error:'Bereits importiert'});a.push({...x,importedAt:new Date().toISOString(),analysis:null});await save(a);r.status(201).json({ok:true})});app.post('/api/prospects/analyze/:id',requireDashboardToken,async(q,r)=>{const a=await load(),p=a.find(x=>x.placeId===q.params.id);if(!p)return r.status(404).json({error:'Nicht gefunden'});p.analysis=await inspect(p.website);p.analyzedAt=new Date().toISOString();await save(a);r.json({scoring:score(p)})});app.post('/api/prospects/demo/:id',requireDashboardToken,async(q,r)=>{if(!(await load()).some(x=>x.placeId===q.params.id))return r.status(404).json({error:'Nicht gefunden'});r.json({url:'/prospect-preview/'+q.params.id})});return app}
-if(process.argv[1]===fileURLToPath(import.meta.url)){const port=Number(process.env.DASHBOARD_PORT)||3000;createProspectApp().listen(port,'127.0.0.1',()=>console.log('Dashboard: http://127.0.0.1:'+port+'/prospects'))}
+export function createProspectApp() {
+  const app = createDashboardApp();
+
+  app.get('/prospects', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'prospect.html'));
+  });
+
+  app.get('/prospect-preview/:placeId', async (req, res) => {
+    const prospects = await loadProspects();
+    const prospect = prospects.find((p) => p.placeId === req.params.placeId);
+    if (!prospect) return res.status(404).send('Prospect nicht gefunden.');
+    res.type('html').send(renderDemoPreview(prospect));
+  });
+
+  app.post('/api/prospects/search', requireDashboardToken, async (req, res) => {
+    try {
+      res.json(await searchGooglePlaces(req.body?.query));
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/prospects', requireDashboardToken, async (req, res) => {
+    const prospects = await loadProspects();
+    const withScoring = prospects
+      .map((p) => ({ ...p, scoring: scoreProspect(p) }))
+      .sort((a, b) => (b.scoring.score ?? -1) - (a.scoring.score ?? -1));
+    res.json(withScoring);
+  });
+
+  app.post('/api/prospects', requireDashboardToken, async (req, res) => {
+    const candidate = req.body?.prospect;
+    if (!candidate?.placeId || !candidate?.name) {
+      return res.status(400).json({ error: 'Ungültiger Treffer (placeId und name erforderlich).' });
+    }
+    const prospects = await loadProspects();
+    if (prospects.some((p) => p.placeId === candidate.placeId)) {
+      return res.status(409).json({ error: 'Dieser Treffer wurde bereits importiert.' });
+    }
+    prospects.push({ ...candidate, importedAt: new Date().toISOString(), analysis: null, analyzedAt: null });
+    await saveProspects(prospects);
+    res.status(201).json({ ok: true });
+  });
+
+  app.post('/api/prospects/:placeId/analyze', requireDashboardToken, async (req, res) => {
+    const prospects = await loadProspects();
+    const prospect = prospects.find((p) => p.placeId === req.params.placeId);
+    if (!prospect) return res.status(404).json({ error: 'Prospect nicht gefunden.' });
+    prospect.analysis = await limitAnalysis(() => analyzeWebsite(prospect.website));
+    prospect.analyzedAt = new Date().toISOString();
+    await saveProspects(prospects);
+    res.json({ scoring: scoreProspect(prospect) });
+  });
+
+  return app;
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const port = Number(process.env.DASHBOARD_PORT) || 3000;
+  const host = process.env.HOST_DASHBOARD || '127.0.0.1';
+  createProspectApp().listen(port, host, () => {
+    console.log(`Agentur-Dashboard läuft auf http://${host}:${port}/prospects`);
+  });
+}
