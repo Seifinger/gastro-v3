@@ -55,7 +55,7 @@ async function branchExists(branch) {
 async function main() {
   const push = process.argv.includes('--push') || process.env.PUBLISH_PUSH === '1';
 
-  const results = await buildAll({ publicBaseUrl: process.env.PUBLIC_BASE_URL, filter: approvedFilter });
+  const results = await buildAll({ publicBaseUrl: process.env.PUBLIC_BASE_URL, apiBase: process.env.WIRT_API_BASE_URL, filter: approvedFilter });
   const approved = results.filter((r) => r.ok);
   const notApproved = results.filter((r) => !r.ok && r.stage === 'filtered');
   const failed = results.filter((r) => !r.ok && r.stage !== 'filtered');

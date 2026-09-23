@@ -5,11 +5,12 @@ import { escapeAttr, escapeHtml } from '../blueprints/_shared/util.js';
 import { googleFontsHref } from './fonts.js';
 import { buildLocalBusinessJsonLd } from './jsonld.js';
 
-function renderSection(briefing, tokens, section) {
-  if (section.blueprint === 'tel-cta') return renderTelCta(briefing, tokens, section.ctx);
+function renderSection(briefing, tokens, section, apiBase) {
+  const ctx = apiBase ? { ...section.ctx, apiBase } : section.ctx;
+  if (section.blueprint === 'tel-cta') return renderTelCta(briefing, tokens, ctx);
   const bp = blueprints[section.blueprint];
   if (!bp) throw new Error(`Renderer: unbekannter Blueprint "${section.blueprint}"`);
-  return bp.render(briefing, tokens, section.ctx);
+  return bp.render(briefing, tokens, ctx);
 }
 
 const BASE_CSS = `
@@ -26,7 +27,8 @@ img{max-width:100%;}
 export function renderSite(briefing, composed, options = {}) {
   const { tokens, sections, archetype } = composed;
   const canonicalUrl = options.canonicalUrl || null;
-  const rendered = sections.map((section) => renderSection(briefing, tokens, section)).filter((r) => r.html);
+  const apiBase = options.apiBase || null;
+  const rendered = sections.map((section) => renderSection(briefing, tokens, section, apiBase)).filter((r) => r.html);
   const bodyHtml = rendered.map((r) => r.html).join('\n');
   const css = BASE_CSS + rendered.map((r) => r.css).join('\n');
   const fontsHref = googleFontsHref(tokens.typography, tokens.accentTypography);

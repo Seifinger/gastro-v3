@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wirt-Portal – Anmeldung</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+  <form class="login-form" id="login-form">
+    <h1>Wirt-Portal</h1>
+    <label for="slug">Betrieb</label>
+    <input id="slug" name="slug" type="text" required autocomplete="username">
+    <label for="passwort">Passwort</label>
+    <input id="passwort" name="passwort" type="password" required autocomplete="current-password">
+    <button type="submit">Anmelden</button>
+    <p class="warn" id="error" role="alert"></p>
+  </form>
+</main>
+<script>
+document.getElementById('login-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const slug = document.getElementById('slug').value.trim();
+  const passwort = document.getElementById('passwort').value;
+  const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug, passwort }) });
+  if (res.ok) { window.location.href = '/index.html'; }
+  else { document.getElementById('error').textContent = 'Anmeldung fehlgeschlagen.'; }
+});
+</script>
+</body>
+</html>

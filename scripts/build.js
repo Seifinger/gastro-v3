@@ -16,7 +16,7 @@ const root = path.join(__dirname, '..');
 const defaultDataDir = path.join(root, 'data');
 const defaultDocsDir = path.join(root, 'docs');
 
-export async function buildAll({ publicBaseUrl, filter, dataDir = defaultDataDir, docsDir = defaultDocsDir } = {}) {
+export async function buildAll({ publicBaseUrl, apiBase, filter, dataDir = defaultDataDir, docsDir = defaultDocsDir } = {}) {
   const entries = await readdir(dataDir, { withFileTypes: true }).catch(() => []);
   const files = entries.filter((e) => e.isFile() && e.name.endsWith('.json')).map((e) => e.name);
 
@@ -43,7 +43,7 @@ export async function buildAll({ publicBaseUrl, filter, dataDir = defaultDataDir
 
     const composed = compose(briefing);
     const canonicalUrl = publicBaseUrl ? `${publicBaseUrl.replace(/\/$/, '')}/${briefing.id}/` : null;
-    const rendered = renderSite(briefing, composed, { canonicalUrl });
+    const rendered = renderSite(briefing, composed, { canonicalUrl, apiBase });
     const verdict = judge(briefing, composed, rendered);
 
     if (!verdict.pass) {
@@ -60,7 +60,7 @@ export async function buildAll({ publicBaseUrl, filter, dataDir = defaultDataDir
 }
 
 async function main() {
-  const results = await buildAll({ publicBaseUrl: process.env.PUBLIC_BASE_URL });
+  const results = await buildAll({ publicBaseUrl: process.env.PUBLIC_BASE_URL, apiBase: process.env.WIRT_API_BASE_URL });
   const ok = results.filter((r) => r.ok);
   const failed = results.filter((r) => !r.ok);
 
