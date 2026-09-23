@@ -1,0 +1,10 @@
+{
+  "id": "gallery-strip",
+  "category": "ambiente",
+  "name": "Scrolling Strip Gallery",
+  "asymmetric": false,
+  "signatureCapable": false,
+  "requires": ["fotos"],
+  "prefers": [],
+  "motionProfile": "reveal"
+}

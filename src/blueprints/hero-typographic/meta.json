@@ -1,0 +1,10 @@
+{
+  "id": "hero-typographic",
+  "category": "hero",
+  "name": "Typographic Hero",
+  "asymmetric": false,
+  "signatureCapable": true,
+  "requires": [],
+  "prefers": [],
+  "motionProfile": "hero"
+}

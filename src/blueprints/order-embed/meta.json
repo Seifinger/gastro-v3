@@ -1,0 +1,10 @@
+{
+  "id": "order-embed",
+  "category": "conversion",
+  "name": "Order Embed",
+  "asymmetric": false,
+  "signatureCapable": false,
+  "requires": ["speisekarte"],
+  "prefers": [],
+  "motionProfile": "none"
+}

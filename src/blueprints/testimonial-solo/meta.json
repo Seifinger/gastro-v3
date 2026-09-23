@@ -1,0 +1,10 @@
+{
+  "id": "testimonial-solo",
+  "category": "social-proof",
+  "name": "Solo Testimonial",
+  "asymmetric": false,
+  "signatureCapable": true,
+  "requires": ["testimonials"],
+  "prefers": [],
+  "motionProfile": "reveal"
+}

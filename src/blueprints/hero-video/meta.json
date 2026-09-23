@@ -1,0 +1,10 @@
+{
+  "id": "hero-video",
+  "category": "hero",
+  "name": "Video Hero",
+  "asymmetric": false,
+  "signatureCapable": true,
+  "requires": ["video"],
+  "prefers": ["fotos"],
+  "motionProfile": "hero"
+}

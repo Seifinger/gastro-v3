@@ -1,0 +1,10 @@
+{
+  "id": "testimonial-grid",
+  "category": "social-proof",
+  "name": "Testimonial Grid",
+  "asymmetric": true,
+  "signatureCapable": false,
+  "requires": ["testimonials"],
+  "prefers": [],
+  "motionProfile": "reveal"
+}

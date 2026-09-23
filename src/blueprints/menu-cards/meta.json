@@ -1,0 +1,10 @@
+{
+  "id": "menu-cards",
+  "category": "product",
+  "name": "Menu Cards",
+  "asymmetric": true,
+  "signatureCapable": false,
+  "requires": ["speisekarte"],
+  "prefers": ["fotos"],
+  "motionProfile": "reveal"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "reservation-form",
+  "category": "conversion",
+  "name": "Reservation Form",
+  "asymmetric": false,
+  "signatureCapable": false,
+  "requires": [],
+  "prefers": ["oeffnungszeiten"],
+  "motionProfile": "none"
+}

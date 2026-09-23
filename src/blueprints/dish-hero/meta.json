@@ -1,0 +1,10 @@
+{
+  "id": "dish-hero",
+  "category": "product",
+  "name": "Signature Dish Hero",
+  "asymmetric": false,
+  "signatureCapable": true,
+  "requires": ["signaturgericht"],
+  "prefers": ["fotos", "speisekarte"],
+  "motionProfile": "reveal"
+}
