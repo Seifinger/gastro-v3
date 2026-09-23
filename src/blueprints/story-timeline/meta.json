@@ -1,0 +1,10 @@
+{
+  "id": "story-timeline",
+  "category": "story",
+  "name": "History Timeline",
+  "asymmetric": false,
+  "signatureCapable": false,
+  "requires": ["historie"],
+  "prefers": [],
+  "motionProfile": "reveal"
+}

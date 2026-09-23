@@ -1,0 +1,10 @@
+{
+  "id": "hero-fullbleed",
+  "category": "hero",
+  "name": "Fullbleed Hero",
+  "asymmetric": false,
+  "signatureCapable": true,
+  "requires": [],
+  "prefers": ["fotos"],
+  "motionProfile": "hero"
+}

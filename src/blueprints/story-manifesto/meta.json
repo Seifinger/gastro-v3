@@ -1,0 +1,10 @@
+{
+  "id": "story-manifesto",
+  "category": "story",
+  "name": "Manifesto",
+  "asymmetric": false,
+  "signatureCapable": true,
+  "requires": [],
+  "prefers": ["usp", "konzept"],
+  "motionProfile": "reveal"
+}

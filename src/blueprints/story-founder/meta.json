@@ -1,0 +1,10 @@
+{
+  "id": "story-founder",
+  "category": "story",
+  "name": "Founder Story",
+  "asymmetric": false,
+  "signatureCapable": false,
+  "requires": ["konzept"],
+  "prefers": ["fotos", "usp"],
+  "motionProfile": "reveal"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "gallery-single",
+  "category": "ambiente",
+  "name": "Single Ambience Image",
+  "asymmetric": false,
+  "signatureCapable": true,
+  "requires": ["fotos"],
+  "prefers": [],
+  "motionProfile": "reveal"
+}

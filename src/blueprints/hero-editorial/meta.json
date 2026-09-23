@@ -1,0 +1,10 @@
+{
+  "id": "hero-editorial",
+  "category": "hero",
+  "name": "Editorial Hero",
+  "asymmetric": true,
+  "signatureCapable": true,
+  "requires": [],
+  "prefers": ["fotos"],
+  "motionProfile": "hero"
+}

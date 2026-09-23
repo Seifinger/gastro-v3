@@ -1,0 +1,10 @@
+{
+  "id": "dish-ingredients",
+  "category": "product",
+  "name": "Dish with Ingredients",
+  "asymmetric": false,
+  "signatureCapable": true,
+  "requires": ["speisekarte"],
+  "prefers": ["fotos"],
+  "motionProfile": "reveal"
+}

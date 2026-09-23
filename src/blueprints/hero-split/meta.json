@@ -1,0 +1,10 @@
+{
+  "id": "hero-split",
+  "category": "hero",
+  "name": "Split Hero",
+  "asymmetric": true,
+  "signatureCapable": true,
+  "requires": [],
+  "prefers": ["fotos"],
+  "motionProfile": "hero"
+}

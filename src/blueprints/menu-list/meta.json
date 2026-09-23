@@ -1,0 +1,10 @@
+{
+  "id": "menu-list",
+  "category": "product",
+  "name": "Menu List",
+  "asymmetric": false,
+  "signatureCapable": false,
+  "requires": ["speisekarte"],
+  "prefers": [],
+  "motionProfile": "reveal"
+}

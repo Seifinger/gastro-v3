@@ -1,0 +1,10 @@
+{
+  "id": "menu-board",
+  "category": "product",
+  "name": "Chalkboard Menu",
+  "asymmetric": false,
+  "signatureCapable": false,
+  "requires": ["speisekarte"],
+  "prefers": [],
+  "motionProfile": "none"
+}

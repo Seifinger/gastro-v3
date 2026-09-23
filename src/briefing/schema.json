@@ -28,10 +28,12 @@
     "video":{"$ref":"#/definitions/url"},
     "speisekarte":{"$ref":"#/definitions/menu"},
     "testimonials":{"$ref":"#/definitions/quotes"},
-    "historie":{"$ref":"#/definitions/history"}
+    "historie":{"$ref":"#/definitions/history"},
+    "freigabe":{"$ref":"#/definitions/approval"}
   },
   "definitions":{
     "status":{"enum":["confirmed","draft","unknown"]},
+    "approval":{"type":"object","required":["status","value"],"additionalProperties":false,"properties":{"status":{"$ref":"#/definitions/status"},"value":{"type":["boolean","null"]}}},
     "text":{"type":"object","required":["status","value"],"additionalProperties":false,"properties":{"status":{"$ref":"#/definitions/status"},"value":{"type":["string","null"]}}},
     "price":{"type":"object","required":["status","value"],"additionalProperties":false,"properties":{"status":{"$ref":"#/definitions/status"},"value":{"enum":["günstig","mittel","gehoben","fine-dining",null]}}},
     "url":{"type":"object","required":["status","value"],"additionalProperties":false,"properties":{"status":{"$ref":"#/definitions/status"},"value":{"anyOf":[{"type":"null"},{"type":"string","format":"uri","pattern":"^https://"}]}}},

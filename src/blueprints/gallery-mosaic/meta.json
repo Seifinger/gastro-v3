@@ -1,0 +1,10 @@
+{
+  "id": "gallery-mosaic",
+  "category": "ambiente",
+  "name": "Mosaic Gallery",
+  "asymmetric": true,
+  "signatureCapable": false,
+  "requires": ["fotos"],
+  "prefers": [],
+  "motionProfile": "reveal"
+}

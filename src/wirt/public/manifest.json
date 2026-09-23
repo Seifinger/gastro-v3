@@ -1,0 +1,9 @@
+{
+  "name": "Wirt-Portal",
+  "short_name": "Wirt-Portal",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#fbfaf8",
+  "theme_color": "#7a3b2e",
+  "icons": []
+}
