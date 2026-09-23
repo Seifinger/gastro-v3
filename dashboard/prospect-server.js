@@ -25,7 +25,7 @@ export function setProspectStoreFile(file) {
 const FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount';
 const MAX_RESULTS = 20;
 const ANALYSIS_TIMEOUT_MS = 8000;
-const ANALYSIS_CONCURRENCY = 5;
+export const ANALYSIS_CONCURRENCY = 5;
 const OUTDATED_YEARS = 3;
 
 function escapeHtml(value) {
@@ -34,7 +34,7 @@ function escapeHtml(value) {
   }[c]));
 }
 
-async function loadProspects() {
+export async function loadProspects() {
   try {
     return JSON.parse(await readFile(storeFile, 'utf-8'));
   } catch (err) {
@@ -43,7 +43,7 @@ async function loadProspects() {
   }
 }
 
-async function saveProspects(list) {
+export async function saveProspects(list) {
   await mkdir(path.dirname(storeFile), { recursive: true });
   await writeFile(storeFile, `${JSON.stringify(list, null, 2)}\n`, 'utf-8');
 }
@@ -113,7 +113,7 @@ export async function analyzeWebsite(url, { request = fetch } = {}) {
 // A small semaphore so that even if several analyze requests land at once
 // (multiple browser tabs, fast double-clicks before the button disables),
 // at most ANALYSIS_CONCURRENCY website fetches run concurrently.
-function createLimiter(maxConcurrent) {
+export function createLimiter(maxConcurrent) {
   let active = 0;
   const queue = [];
   const runNext = () => {
@@ -194,7 +194,7 @@ export async function searchGooglePlaces(query, { key = process.env.GOOGLE_PLACE
 // always shown above the hero, never optional. Only the prospect's name and
 // the region derived from its address are ever interpolated — no phone
 // number, rating or review count from Google Places reaches this page.
-function renderDemoPreview(prospect) {
+export function renderDemoPreview(prospect) {
   const region = prospect.adresse?.split(',').at(-1)?.trim() || 'Ihrer Region';
   return `<!doctype html>
 <meta charset=utf-8>
