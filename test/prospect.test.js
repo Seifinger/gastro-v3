@@ -40,21 +40,45 @@ test('searchGooglePlaces caps pageSize at 20 in the request body', async () => {
     key: 'fake-key',
     request: async (url, options) => {
       sentBody = JSON.parse(options.body);
-      return { ok: true, json: async () => ({ places: [] }) };
+      return { ok: true, text: async () => JSON.stringify({ places: [] }) };
     },
   });
   assert.equal(sentBody.pageSize, 20);
 });
 
-test('searchGooglePlaces surfaces a clear message for HTTP 403 and 429', async () => {
+test('searchGooglePlaces surfaces a clear message for HTTP 403 and 429, including Google\'s own error text when present', async () => {
   await assert.rejects(
-    () => searchGooglePlaces('Restaurants in X', { key: 'k', request: async () => ({ ok: false, status: 403 }) }),
-    /403/,
+    () => searchGooglePlaces('Restaurants in X', {
+      key: 'k',
+      request: async () => ({ ok: false, status: 403, text: async () => JSON.stringify({ error: { code: 403, message: 'API key not authorized', status: 'PERMISSION_DENIED' } }) }),
+    }),
+    /403.*API key not authorized/s,
   );
   await assert.rejects(
-    () => searchGooglePlaces('Restaurants in X', { key: 'k', request: async () => ({ ok: false, status: 429 }) }),
-    /429|Quota|Kontingent/,
+    () => searchGooglePlaces('Restaurants in X', {
+      key: 'k',
+      request: async () => ({ ok: false, status: 429, text: async () => JSON.stringify({ error: { code: 429, message: 'Quota exceeded', status: 'RESOURCE_EXHAUSTED' } }) }),
+    }),
+    /429.*Quota exceeded/s,
   );
+});
+
+test('searchGooglePlaces handles a non-JSON error body (e.g. a proxy/gateway error page) without crashing', async () => {
+  await assert.rejects(
+    () => searchGooglePlaces('Restaurants in X', {
+      key: 'k',
+      request: async () => ({ ok: false, status: 502, text: async () => '<html>502 Bad Gateway</html>' }),
+    }),
+    /HTTP 502/,
+  );
+});
+
+test('searchGooglePlaces treats a 200 response with no "places" key (zero results) as an empty list, not a crash', async () => {
+  const result = await searchGooglePlaces('Restaurants in X', {
+    key: 'k',
+    request: async () => ({ ok: true, text: async () => '{}' }),
+  });
+  assert.deepEqual(result, []);
 });
 
 test('searchGooglePlaces surfaces a network/timeout error without crashing', async () => {
@@ -68,9 +92,27 @@ test('searchGooglePlaces deduplicates by place id and never returns more than th
   const places = Array.from({ length: 3 }, (_, i) => ({ id: 'p1', displayName: { text: `Dup ${i}` } }));
   const result = await searchGooglePlaces('Restaurants in X', {
     key: 'k',
-    request: async () => ({ ok: true, json: async () => ({ places }) }),
+    request: async () => ({ ok: true, text: async () => JSON.stringify({ places }) }),
   });
   assert.equal(result.length, 1);
+});
+
+test('searchGooglePlaces tolerates places entries missing optional fields (real API responses vary by place type)', async () => {
+  // Modeled on the documented Places API (New) searchText response shape:
+  // some entries lack displayName, phone, website, or rating entirely.
+  const places = [
+    { id: 'p1' },
+    { id: 'p2', displayName: { text: 'Nur Name', languageCode: 'de' } },
+    { id: '' /* malformed: empty id must be dropped, not crash */ },
+    { /* missing id entirely */ displayName: { text: 'Ohne ID' } },
+  ];
+  const result = await searchGooglePlaces('Restaurants in X', {
+    key: 'k',
+    request: async () => ({ ok: true, text: async () => JSON.stringify({ places }) }),
+  });
+  assert.equal(result.length, 2);
+  assert.deepEqual(result[0], { placeId: 'p1', name: '', adresse: '', telefon: '', website: '', rating: null, bewertungen: null });
+  assert.equal(result[1].name, 'Nur Name');
 });
 
 test('scoreProspect: no website is scored 100 with the highest priority', () => {

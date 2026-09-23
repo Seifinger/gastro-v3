@@ -145,16 +145,31 @@ export async function searchGooglePlaces(query, { key = process.env.GOOGLE_PLACE
     throw new Error(`Netzwerk- oder Timeoutfehler bei der Google-Places-Anfrage: ${err.message}`);
   }
 
-  if (!res.ok) {
-    if (res.status === 403) throw new Error('HTTP 403: Google-Places-API-Zugriff verweigert. API-Key, API-Freigabe und Abrechnung prüfen.');
-    if (res.status === 429) throw new Error('HTTP 429: Google-Places-Kontingent (Quota) erreicht. Später erneut versuchen.');
-    throw new Error(`Google Places antwortet mit HTTP ${res.status}.`);
+  // Google returns JSON error bodies ({"error":{"code","message","status"}})
+  // on both success and failure responses, but a proxy/gateway in front of
+  // the API can return a non-JSON body (HTML error page, empty body) on
+  // failure. Parse defensively either way rather than letting a raw
+  // SyntaxError from res.json() surface as the user-facing message.
+  const rawText = await res.text();
+  let body = {};
+  if (rawText) {
+    try { body = JSON.parse(rawText); } catch { body = {}; }
   }
 
-  const body = await res.json();
+  if (!res.ok) {
+    const googleMessage = body?.error?.message;
+    if (res.status === 403) {
+      throw new Error(`HTTP 403: Google-Places-API-Zugriff verweigert. API-Key, API-Freigabe und Abrechnung prüfen.${googleMessage ? ` (${googleMessage})` : ''}`);
+    }
+    if (res.status === 429) {
+      throw new Error(`HTTP 429: Google-Places-Kontingent (Quota) erreicht. Später erneut versuchen.${googleMessage ? ` (${googleMessage})` : ''}`);
+    }
+    throw new Error(`Google Places antwortet mit HTTP ${res.status}.${googleMessage ? ` ${googleMessage}` : ''}`);
+  }
+
   const seen = new Set();
-  return (body.places || [])
-    .filter((p) => p.id && !seen.has(p.id) && seen.add(p.id))
+  return (Array.isArray(body.places) ? body.places : [])
+    .filter((p) => p && typeof p.id === 'string' && p.id && !seen.has(p.id) && seen.add(p.id))
     .slice(0, MAX_RESULTS)
     .map((p) => ({
       placeId: p.id,
@@ -162,8 +177,8 @@ export async function searchGooglePlaces(query, { key = process.env.GOOGLE_PLACE
       adresse: p.formattedAddress || '',
       telefon: p.nationalPhoneNumber || '',
       website: p.websiteUri || '',
-      rating: p.rating ?? null,
-      bewertungen: p.userRatingCount ?? null,
+      rating: typeof p.rating === 'number' ? p.rating : null,
+      bewertungen: typeof p.userRatingCount === 'number' ? p.userRatingCount : null,
     }));
 }
 
