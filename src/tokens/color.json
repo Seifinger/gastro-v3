@@ -1,0 +1,1 @@
+{"fallback":"#765539","background":"#fffaf3","text":"#242422","ctaTextContrast":7,"textContrast":4.5,"paletteRule":"confirmed primary or archetype fallback; darken CTA until white text has 7:1; hover darkens by 20%","forbidden":["unjustified-purple-indigo","gradient-over-two-colors"]}
