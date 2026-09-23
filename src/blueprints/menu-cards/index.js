@@ -14,7 +14,7 @@ export function render(briefing, tokens) {
     return `<article class="bp-card">${img}<div class="bp-card-body"><h3 class="bp-name">${escapeHtml(m.name)}</h3>${m.description ? `<p class="bp-desc">${escapeHtml(m.description)}</p>` : ''}${m.price ? `<p class="bp-price">${escapeHtml(m.price)}</p>` : ''}</div></article>`;
   }).join('');
   const html = `
-<section class="${scope}" aria-label="Karte">
+<section class="${scope}" aria-label="Karte" id="speisekarte">
   <h2>Von der Karte</h2>
   <div class="bp-grid">${cards}</div>
 </section>`.trim();

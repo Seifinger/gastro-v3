@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { validateBriefing } from '../src/briefing/validator.js';
 import { compose } from '../src/composer/index.js';
 import { renderSite } from '../src/renderer/index.js';
+import { PROSPECT_DEMO_VIDEO_URL } from '../src/blueprints/_shared/util.js';
 import pkg from '../package.json' with { type: 'json' };
 
 const { briefing } = validateBriefing({
@@ -59,6 +60,29 @@ test('renderer builds LocalBusiness JSON-LD only from confirmed fields', () => {
   assert.equal(jsonLd.telephone, '0221 1234567');
   assert.equal(jsonLd.address.streetAddress, 'Ringstraße 5, 50667 Köln');
   assert.ok(Array.isArray(jsonLd.openingHoursSpecification));
+});
+
+test('the real build pipeline (compose + renderSite) never contains the local prospect-demo video, even for a briefing with a confirmed video field', () => {
+  const { briefing: withVideo } = validateBriefing({
+    id: 'trattoria-video', name: 'Trattoria Video', kueche: 'italienisch', ort: 'Köln', hauptaktion: 'reservieren',
+    video: { status: 'confirmed', value: 'https://example.org/echtes-kundenvideo.mp4' },
+    fotos: { status: 'confirmed', value: [
+      { url: 'https://example.org/hero.jpg', caption: 'Hero Außenansicht', confirmed: true },
+    ] },
+  });
+  const composedWithVideo = compose(withVideo);
+  const renderedWithVideo = renderSite(withVideo, composedWithVideo);
+  assert.doesNotMatch(renderedWithVideo.html, /cloudfront\.net/);
+
+  // Even if the demo asset URL somehow ended up in a real briefing's confirmed
+  // video field, the pipeline must still never render it as customer material.
+  const { briefing: abused } = validateBriefing({
+    id: 'trattoria-abuse', name: 'Trattoria Abuse', kueche: 'italienisch', ort: 'Köln', hauptaktion: 'informieren',
+    video: { status: 'confirmed', value: PROSPECT_DEMO_VIDEO_URL },
+  });
+  const composedAbused = compose(abused);
+  const renderedAbused = renderSite(abused, composedAbused);
+  assert.doesNotMatch(renderedAbused.html, /cloudfront\.net/);
 });
 
 test('renderer does not invent JSON-LD fields for unconfirmed data', () => {

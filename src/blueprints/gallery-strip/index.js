@@ -7,7 +7,7 @@ export function render(briefing, tokens) {
   const photos = confirmedPhotos(briefing);
   const figures = photos.map((p) => `<figure><img src="${escapeAttr(p.url)}" alt="${escapeAttr(p.caption || briefing.name)}" loading="lazy">${p.caption ? `<figcaption>${escapeHtml(p.caption)}</figcaption>` : ''}</figure>`).join('');
   const html = photos.length ? `
-<section class="${scope}" aria-label="Galerie">
+<section class="${scope}" aria-label="Galerie" id="atmosphaere">
   <h2>Einblicke</h2>
   <div class="bp-strip" tabindex="0">${figures}</div>
 </section>`.trim() : '';

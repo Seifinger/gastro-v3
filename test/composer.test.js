@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { validateBriefing } from '../src/briefing/validator.js';
 import { compose } from '../src/composer/index.js';
 import { blueprints } from '../src/blueprints/index.js';
+import { PROSPECT_DEMO_VIDEO_URL } from '../src/blueprints/_shared/util.js';
 
 function build(input) {
   const { briefing, valid, errors } = validateBriefing(input);
@@ -110,4 +111,14 @@ test('dramaturgical order places hero first and the mandatory conversion element
   assert.match(result.sections[0].blueprint, /^hero-/);
   const last = result.sections[result.sections.length - 1];
   assert.equal(last.blueprint, 'reservation-form');
+});
+
+test('a briefing whose confirmed "video" is the prospect-demo asset never selects hero-video (falls back to a photo/typographic hero)', () => {
+  const demoUrlAsCustomerVideo = build({
+    id: 'demo-url-abuse', name: 'Demo URL Abuse', kueche: 'international', ort: 'Berlin', hauptaktion: 'reservieren',
+    video: { status: 'confirmed', value: PROSPECT_DEMO_VIDEO_URL },
+    fotos: { status: 'confirmed', value: photos(3) },
+  });
+  const result = compose(demoUrlAsCustomerVideo);
+  assert.notEqual(result.sections[0].blueprint, 'hero-video');
 });

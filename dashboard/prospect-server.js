@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createDashboardApp } from './server.js';
 import { requireDashboardToken } from './auth.js';
+import { PROSPECT_DEMO_VIDEO_URL } from '../src/blueprints/_shared/util.js';
 const root=join(dirname(fileURLToPath(import.meta.url)),'..'); const store=join(root,'data','runtime','prospects.json');
 const mask='places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -12,5 +13,74 @@ function score(p){if(!p.website)return {score:100,priority:'Sehr hoch – keine 
 async function inspect(url){if(!url)return null;try{const r=await fetch(url,{redirect:'follow',signal:AbortSignal.timeout(8000),headers:{'User-Agent':'gastro-v3-prospect-review/1.0'}});if(!r.ok)return {reachable:false};const h=(await r.text()).toLowerCase();const has=x=>x.some(k=>h.includes(k));const yr=/(?:©|&copy;|copyright)\s*(\d{4})/i.exec(h);return {reachable:true,https:r.url.startsWith('https:'),mobile:/<meta[^>]+name=["']viewport/.test(h),order:has(['online bestellen','jetzt bestellen','lieferando','gloriafood','wolt','ubereats']),reserve:has(['tisch reservieren','jetzt reservieren','reservierung online','opentable','quandoo','resmio','aleno']),outdated:yr?new Date().getFullYear()-Number(yr[1])>=3:false};}catch{return {reachable:false};}}
 async function places(query){const key=process.env.GOOGLE_PLACES_API_KEY;if(!key)throw Error('GOOGLE_PLACES_API_KEY fehlt.');if(!query||query.length<3)throw Error('Suchbegriff ist zu kurz.');const r=await fetch('https://places.googleapis.com/v1/places:searchText',{method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,'X-Goog-FieldMask':mask},body:JSON.stringify({textQuery:query,pageSize:20}),signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Google Places HTTP '+r.status);const seen=new Set();return (await r.json()).places?.filter(x=>x.id&&!seen.has(x.id)&&seen.add(x.id)).map(x=>({placeId:x.id,name:x.displayName?.text||'',adresse:x.formattedAddress||'',telefon:x.nationalPhoneNumber||'',website:x.websiteUri||'',rating:x.rating??null,bewertungen:x.userRatingCount??null}))||[];}
 function page(){return `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Prospects</title><link rel=stylesheet href=/styles.css><main><p><a href=/leads>← Leads</a></p><h1>Prospect-Workflow</h1><p>Google-Suche, transparentes Website-Scoring und lokale Konzeptdemos. Die Analyse ist eine Heuristik; prüfe Ergebnisse vor einem Pitch.</p><input id=q value="Restaurants in Mühldorf am Inn"><button id=find>Suchen</button><p id=msg></p><div id=results></div><h2>Importierte Prospects</h2><div id=list></div></main><script>const $=x=>document.getElementById(x),token=()=>localStorage.getItem('gastro-v3-dashboard-token')||'';async function api(p,b){let r=await fetch('/api/prospects/'+p,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify(b||{})});let j=await r.json();if(!r.ok)throw Error(j.error);return j}function e(s){return String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}async function list(){try{let a=await api('list');$('list').innerHTML=a.map(x=>'<article class=lead-row><b>'+e(x.name)+'</b><br>'+e(x.adresse)+'<br><b>'+e(x.scoring.priority)+'</b> '+(x.scoring.score??'')+' · '+e(x.scoring.reasons.join(', '))+'<p><button onclick="an(\''+x.placeId+'\')">Website analysieren</button> <button onclick="demo(\''+x.placeId+'\')">Lokale Demo bauen</button> <a target=_blank href="/prospect-preview/'+encodeURIComponent(x.placeId)+'">Preview</a></p></article>').join('')}catch(x){$('list').textContent=x.message}}window.an=async id=>{await api('analyze/'+encodeURIComponent(id));list()};window.demo=async id=>{await api('demo/'+encodeURIComponent(id));list()};$('find').onclick=async()=>{try{let a=await api('search',{query:$('q').value});$('results').innerHTML=a.map(x=>'<article class=lead-row><b>'+e(x.name)+'</b><br>'+e(x.adresse)+' · '+(x.website?'Website':'keine Website')+'<p><button onclick="imp(\''+x.placeId+'\')">Importieren</button></p></article>').join('');window.found=a}catch(x){$('msg').textContent=x.message}};window.imp=async id=>{let x=found.find(x=>x.placeId===id);await api('import',{prospect:x});list()};list()</script>`}
-export function createProspectApp(){const app=createDashboardApp();app.get('/prospects',(q,r)=>r.type('html').send(page()));app.get('/prospect-preview/:id',async(q,r)=>{const p=(await load()).find(x=>x.placeId===q.params.id);if(!p)return r.status(404).send('Nicht gefunden');r.type('html').send(`<!doctype html><meta charset=utf-8><style>body{margin:0;font:18px Georgia;color:#241d18;background:#f6f0e8}header{padding:12px 5%;background:#241d18;color:#fff;font:14px Arial}main{padding:9vw 12%;max-width:900px}h1{font-size:clamp(48px,9vw,110px);margin:.2em 0}button{padding:14px 20px;background:#8b432d;color:#fff;border:0}</style><header>UNVERBINDLICHER KONZEPTENTWURF · NICHT DIE OFFIZIELLE WEBSITE</header><main><p>Gastronomie in ${esc(p.adresse.split(',').at(-1)||'Ihrer Region')}</p><h1>${esc(p.name)}</h1><p>Ein klarer digitaler Auftritt, der Gäste vom ersten Eindruck bis zur Anfrage führt.</p><button>Konzeptgespräch anfragen</button><hr><p>Diese lokale Demo verwendet keine übernommenen Fotos, Rezensionen, Preise oder Betriebsbehauptungen. Vor einer Veröffentlichung sind Inhalte, Rechte und Freigaben zu prüfen.</p></main>`)});app.post('/api/prospects/search',requireDashboardToken,async(q,r)=>{try{r.json(await places(q.body.query))}catch(e){r.status(400).json({error:e.message})}});app.post('/api/prospects/list',requireDashboardToken,async(q,r)=>r.json((await load()).map(x=>({...x,scoring:score(x)})).sort((a,b)=>(b.scoring.score??-1)-(a.scoring.score??-1))));app.post('/api/prospects/import',requireDashboardToken,async(q,r)=>{const x=q.body.prospect;if(!x?.placeId||!x.name)return r.status(400).json({error:'Ungültiger Treffer'});const a=await load();if(a.some(p=>p.placeId===x.placeId))return r.status(409).json({error:'Bereits importiert'});a.push({...x,importedAt:new Date().toISOString(),analysis:null});await save(a);r.status(201).json({ok:true})});app.post('/api/prospects/analyze/:id',requireDashboardToken,async(q,r)=>{const a=await load(),p=a.find(x=>x.placeId===q.params.id);if(!p)return r.status(404).json({error:'Nicht gefunden'});p.analysis=await inspect(p.website);p.analyzedAt=new Date().toISOString();await save(a);r.json({scoring:score(p)})});app.post('/api/prospects/demo/:id',requireDashboardToken,async(q,r)=>{if(!(await load()).some(x=>x.placeId===q.params.id))return r.status(404).json({error:'Nicht gefunden'});r.json({url:'/prospect-preview/'+q.params.id})});return app}
+// The local prospect-concept-demo hero: same cinematic dark video-hero art
+// direction as the hero-video blueprint (fullbleed video/poster, neutral
+// dark scrim, liquid-glass nav pill, top-oriented headline block), but this
+// route never goes through validateBriefing/compose/renderSite — it is a
+// separate, hand-authored page specifically so the temporary demo video
+// (PROSPECT_DEMO_VIDEO_URL) can never leak into a real customer build. No
+// confirmed USP/menu/photos exist yet for a prospect, so the copy stays a
+// neutral, non-factual concept statement, and the concept-draft marker is
+// always shown above the hero, never optional.
+function demoHeroPage(p){
+  const region = p.adresse?.split(',').at(-1)?.trim() || 'Ihrer Region';
+  return `<!doctype html>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>${esc(p.name)} · Konzeptentwurf</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;font:17px/1.6 Georgia,'Times New Roman',serif;color:#fff;background:#1b1a17}
+.gv-marker{position:relative;z-index:4;padding:10px 5vw;background:#000;color:#fff;font:600 13px/1.4 Arial,sans-serif;letter-spacing:.04em;text-align:center}
+.gv-hero{position:relative;min-height:100vh;min-height:100svh;overflow:hidden;isolation:isolate;display:flex;flex-direction:column}
+.gv-hero .gv-media{position:absolute;inset:0;z-index:-2;background:#2a2622}
+.gv-hero .gv-poster{position:absolute;inset:0;background:linear-gradient(160deg,#332d26,#1b1a17);background-size:cover;background-position:center}
+.gv-hero video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gv-hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,.1) 30%,rgba(0,0,0,.42) 68%,rgba(0,0,0,.8) 100%)}
+.gv-glass{background:rgba(18,16,14,.42);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.gv-glass{background:rgba(16,14,12,.8)}}
+.gv-nav{position:relative;z-index:3;margin:16px;padding:14px 24px;border-radius:999px;font:600 15px/1 Arial,sans-serif;width:fit-content}
+.gv-inner{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:flex-start;padding:104px 6vw 48px;max-width:640px}
+.gv-eyebrow{font:600 13px/1.4 Arial,sans-serif;text-transform:uppercase;letter-spacing:.12em;opacity:.8;margin:0 0 12px}
+.gv-hero h1{font-size:clamp(40px,8vw,84px);line-height:1.05;margin:0 0 16px}
+.gv-lead{font-size:19px;max-width:44ch;color:#f2efe8;margin:0 0 32px}
+.gv-hero button{padding:16px 28px;background:#8b432d;color:#fff;border:0;font:600 16px/1 Arial,sans-serif;border-radius:2px;cursor:pointer}
+.gv-hero button:hover{background:#a04f34}
+.gv-note{padding:32px 6vw 64px;max-width:640px;font-size:15px;opacity:.85}
+:focus-visible{outline:3px solid #d98a63;outline-offset:3px}
+</style>
+<header class="gv-marker">UNVERBINDLICHER KONZEPTENTWURF – NICHT DIE OFFIZIELLE WEBSITE</header>
+<section class="gv-hero" aria-label="${esc(p.name)}">
+  <div class="gv-media">
+    <div class="gv-poster"></div>
+    <video autoplay muted loop playsinline aria-hidden="true" data-demo-video>
+      <source src="${esc(PROSPECT_DEMO_VIDEO_URL)}" type="video/mp4">
+    </video>
+  </div>
+  <p class="gv-nav gv-glass">${esc(p.name)}</p>
+  <div class="gv-inner">
+    <p class="gv-eyebrow">Konzeptentwurf · ${esc(region)}</p>
+    <h1>${esc(p.name)}</h1>
+    <p class="gv-lead">Ein klarer digitaler Auftritt, der Gäste vom ersten Eindruck bis zur Anfrage führt.</p>
+    <button type="button">Konzeptgespräch anfragen</button>
+  </div>
+</section>
+<p class="gv-note">Diese lokale Demo verwendet keine übernommenen Fotos, Rezensionen, Preise oder Betriebsbehauptungen. Das Video ist ein temporäres, unternehmensfremdes Platzhaltermotiv für dieses Konzeptgespräch, kein Material dieses Betriebs, und wird nie in einer echten Kundensite oder einem veröffentlichten Build verwendet. Vor einer Veröffentlichung ersetzt ein bestätigtes Kundenvideo oder -foto diesen Platzhalter, und Inhalte, Rechte und Freigaben werden geprüft.</p>
+<script>
+(function(){
+  var v = document.querySelector('[data-demo-video]');
+  if (!v) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    v.removeAttribute('autoplay');
+    v.pause();
+    v.style.display = 'none';
+  } else {
+    v.addEventListener('error', function(){ v.style.display = 'none'; });
+  }
+})();
+</script>`;
+}
+
+export function createProspectApp(){const app=createDashboardApp();app.get('/prospects',(q,r)=>r.type('html').send(page()));app.get('/prospect-preview/:id',async(q,r)=>{const p=(await load()).find(x=>x.placeId===q.params.id);if(!p)return r.status(404).send('Nicht gefunden');r.type('html').send(demoHeroPage(p))});app.post('/api/prospects/search',requireDashboardToken,async(q,r)=>{try{r.json(await places(q.body.query))}catch(e){r.status(400).json({error:e.message})}});app.post('/api/prospects/list',requireDashboardToken,async(q,r)=>r.json((await load()).map(x=>({...x,scoring:score(x)})).sort((a,b)=>(b.scoring.score??-1)-(a.scoring.score??-1))));app.post('/api/prospects/import',requireDashboardToken,async(q,r)=>{const x=q.body.prospect;if(!x?.placeId||!x.name)return r.status(400).json({error:'Ungültiger Treffer'});const a=await load();if(a.some(p=>p.placeId===x.placeId))return r.status(409).json({error:'Bereits importiert'});a.push({...x,importedAt:new Date().toISOString(),analysis:null});await save(a);r.status(201).json({ok:true})});app.post('/api/prospects/analyze/:id',requireDashboardToken,async(q,r)=>{const a=await load(),p=a.find(x=>x.placeId===q.params.id);if(!p)return r.status(404).json({error:'Nicht gefunden'});p.analysis=await inspect(p.website);p.analyzedAt=new Date().toISOString();await save(a);r.json({scoring:score(p)})});app.post('/api/prospects/demo/:id',requireDashboardToken,async(q,r)=>{if(!(await load()).some(x=>x.placeId===q.params.id))return r.status(404).json({error:'Nicht gefunden'});r.json({url:'/prospect-preview/'+q.params.id})});return app}
 if(process.argv[1]===fileURLToPath(import.meta.url)){const port=Number(process.env.DASHBOARD_PORT)||3000;createProspectApp().listen(port,'127.0.0.1',()=>console.log('Dashboard: http://127.0.0.1:'+port+'/prospects'))}

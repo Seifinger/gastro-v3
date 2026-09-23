@@ -12,7 +12,7 @@ export function render(briefing, tokens) {
     ? `<div class="bp-portrait"><img src="${escapeAttr(portrait.url)}" alt="${escapeAttr(portrait.caption || briefing.name)}" loading="lazy"></div>`
     : '';
   const html = `
-<section class="${scope}" aria-label="Über uns">
+<section class="${scope}" aria-label="Über uns" id="ueber-uns">
   ${portraitHtml}
   <div>
     <h2>Unsere Geschichte</h2>
