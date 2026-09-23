@@ -1,27 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import http from 'node:http';
-import { fileURLToPath } from 'node:url';
 
 process.env.DASHBOARD_TOKEN = 'test-dashboard-token-1234567890';
 process.env.WIRT_SESSION_SECRET = 'test-secret-not-for-production-use-only';
 
-const rootDir = path.dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
-const dataDir = path.join(rootDir, 'data');
-const backupDir = await mkdtemp(path.join(tmpdir(), 'gastro-v3-data-backup-'));
-
-// The dashboard server module reads from the real data/ directory (its
-// paths aren't parameterized like buildAll's), so this test writes into
-// data/ directly and always restores it afterwards.
-const { cp } = await import('node:fs/promises');
-await cp(dataDir, backupDir, { recursive: true });
+// A dedicated temp directory, not the real repo data/. Using the real one
+// (backed up and restored around the test) used to be a genuine race with
+// other test files that also write under data/ concurrently — Node's test
+// runner runs test files in parallel by default, and Windows' directory
+// deletion is far less tolerant of concurrent writes than Linux/ext4,
+// which surfaced as an ENOTEMPTY failure in CI. See DECISIONS.md.
+const dataDir = await mkdtemp(path.join(tmpdir(), 'gastro-v3-dashboard-data-'));
+const docsDir = await mkdtemp(path.join(tmpdir(), 'gastro-v3-dashboard-docs-'));
 
 const { createDashboardApp } = await import('../dashboard/server.js');
 
-const app = createDashboardApp();
+const app = createDashboardApp({ dataDir, docsDir });
 const server = http.createServer(app);
 await new Promise((resolve) => server.listen(0, resolve));
 const { port } = server.address();
@@ -30,8 +28,7 @@ const base = `http://127.0.0.1:${port}`;
 test.after(async () => {
   server.close();
   await rm(dataDir, { recursive: true, force: true });
-  await cp(backupDir, dataDir, { recursive: true });
-  await rm(backupDir, { recursive: true, force: true });
+  await rm(docsDir, { recursive: true, force: true });
 });
 
 test('creating a lead without a Bearer token is rejected', async () => {
