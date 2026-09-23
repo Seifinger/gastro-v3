@@ -1,0 +1,5 @@
+# Lead-Finder: Nutzung und Entscheidungen
+
+In Google Cloud Places API (New) und Abrechnung aktivieren und den API-Key auf diese API beschränken. Lokal in `.env` `GOOGLE_PLACES_API_KEY=...` ergänzen; niemals nach GitHub hochladen. In PowerShell `npm run dev` ausführen; bei Portkollision `DASHBOARD_PORT=3100` in `.env` setzen. Im Dashboard unter `/einstellungen` den Dashboard-Token speichern, dann `/lead-finder` öffnen.
+
+Google Places wird nur nach Klick per Text Search mit maximal 20 Treffern angefragt. Telefon, Website und Bewertung erhöhen möglicherweise die Kosten; Google-Cloud-Budgetwarnungen setzen. Suchergebnisse werden mit Google-Maps-Attribution nur temporär im Browser gezeigt. Dauerhaft unter `data/runtime/` gespeichert werden ausschließlich Place-ID, Vormerkzeit und eigene Notiz. Kein Google-Rohdatum, keine Rezension und kein Foto gelangt in ein Kunden-Briefing; unter `/neu` werden unabhängig geprüfte Daten manuell als Entwurf angelegt. API-Key und Place-Daten bleiben serverseitig bzw. flüchtig, Schreib- und Suchendpunkte benötigen den bestehenden Dashboard-Bearer-Token. Live-Google-Anfragen wurden nicht ausgeführt; Tests nutzen Mock-Antworten.
