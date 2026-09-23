@@ -194,6 +194,12 @@ export async function searchGooglePlaces(query, { key = process.env.GOOGLE_PLACE
 // always shown above the hero, never optional. Only the prospect's name and
 // the region derived from its address are ever interpolated — no phone
 // number, rating or review count from Google Places reaches this page.
+//
+// Below the hero, the page also shows the section shapes a real restaurant
+// site would have (Speisekarte/Atmosphäre/Konzept) so the pitch reads as
+// "a restaurant website", not a generic one-hero splash — but every one of
+// those sections is an explicitly labeled structural placeholder (no
+// invented dishes, prices, hours or photos), same rule as the hero.
 export function renderDemoPreview(prospect) {
   const region = prospect.adresse?.split(',').at(-1)?.trim() || 'Ihrer Region';
   return `<!doctype html>
@@ -212,13 +218,29 @@ body{margin:0;font:17px/1.6 Georgia,'Times New Roman',serif;color:#fff;backgroun
 .gv-hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,.1) 30%,rgba(0,0,0,.42) 68%,rgba(0,0,0,.8) 100%)}
 .gv-glass{background:rgba(18,16,14,.42);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.gv-glass{background:rgba(16,14,12,.8)}}
-.gv-nav{position:relative;z-index:3;margin:16px;padding:14px 24px;border-radius:999px;font:600 15px/1 Arial,sans-serif;width:fit-content}
+.gv-nav{position:relative;z-index:3;margin:16px;padding:14px 24px;border-radius:999px;font:600 15px/1 Arial,sans-serif;width:fit-content;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.gv-nav strong{font-weight:600}
+.gv-nav a{color:inherit;text-decoration:none;font-size:13px;opacity:.85}
+.gv-nav a:hover{opacity:1}
 .gv-inner{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:flex-start;padding:104px 6vw 48px;max-width:640px}
 .gv-eyebrow{font:600 13px/1.4 Arial,sans-serif;text-transform:uppercase;letter-spacing:.12em;opacity:.8;margin:0 0 12px}
 .gv-hero h1{font-size:clamp(40px,8vw,84px);line-height:1.05;margin:0 0 16px}
 .gv-lead{font-size:19px;max-width:44ch;color:#f2efe8;margin:0 0 32px}
-.gv-hero .cta{display:inline-block;padding:16px 28px;background:#8b432d;color:#fff;text-decoration:none;font:600 16px/1 Arial,sans-serif;border-radius:2px;cursor:pointer}
-.gv-hero .cta:hover{background:#a04f34}
+.cta{display:inline-block;padding:16px 28px;background:#8b432d;color:#fff;text-decoration:none;font:600 16px/1 Arial,sans-serif;border-radius:2px;cursor:pointer}
+.cta:hover{background:#a04f34}
+.gv-section{padding:64px 6vw;max-width:900px}
+.gv-section h2{font-size:clamp(26px,4vw,38px);line-height:1.15;margin:0 0 24px}
+.gv-menu{background:#171512}
+.gv-menu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px}
+.gv-menu-grid article{padding:20px;border:1px solid rgba(255,255,255,.14);border-radius:4px}
+.gv-menu-grid h3{margin:0 0 8px;font:600 17px/1.3 Arial,sans-serif}
+.gv-menu-grid p{margin:0;opacity:.75;font-size:15px}
+.gv-gallery{background:#1f1c17}
+.gv-gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 16px}
+.gv-gallery-grid span{display:block;aspect-ratio:4/3;background:#332d26;border-radius:4px}
+.gv-gallery-note{margin:0;font-size:14px;opacity:.7}
+.gv-about{background:#171512}
+.gv-about p{font-size:19px;line-height:1.6;max-width:60ch;margin:0 0 28px}
 .gv-note{padding:32px 6vw 64px;max-width:640px;font-size:15px;opacity:.85}
 :focus-visible{outline:3px solid #d98a63;outline-offset:3px}
 </style>
@@ -230,7 +252,12 @@ body{margin:0;font:17px/1.6 Georgia,'Times New Roman',serif;color:#fff;backgroun
       <source src="${escapeHtml(PROSPECT_DEMO_VIDEO_URL)}" type="video/mp4">
     </video>
   </div>
-  <p class="gv-nav gv-glass">${escapeHtml(prospect.name)}</p>
+  <nav class="gv-nav gv-glass" aria-label="Hauptnavigation">
+    <strong>${escapeHtml(prospect.name)}</strong>
+    <a href="#speisekarte">Speisekarte</a>
+    <a href="#atmosphaere">Atmosphäre</a>
+    <a href="#konzept">Konzept</a>
+  </nav>
   <div class="gv-inner">
     <p class="gv-eyebrow">Konzeptentwurf · ${escapeHtml(region)}</p>
     <h1>${escapeHtml(prospect.name)}</h1>
@@ -238,7 +265,27 @@ body{margin:0;font:17px/1.6 Georgia,'Times New Roman',serif;color:#fff;backgroun
     <a class="cta" href="mailto:?subject=${encodeURIComponent(`Konzeptgespräch: ${prospect.name}`)}">Konzeptgespräch anfragen</a>
   </div>
 </section>
-<p class="gv-note">Diese lokale Demo ist ein unverbindlicher Gestaltungsvorschlag der Agentur. Sie verwendet keine übernommenen Fotos, Rezensionen, Bewertungen, Preise, Öffnungszeiten oder sonstigen unbestätigten Betriebsfakten. Das Video ist ein temporäres, unternehmensfremdes Platzhaltermotiv für dieses Konzeptgespräch, kein Material dieses Betriebs, und wird nie in einer echten Kundensite oder einem veröffentlichten Build verwendet. Vor einer echten Veröffentlichung sind Inhalte, Bildrechte und Freigaben mit dem Betrieb zu klären; ein bestätigtes Kundenvideo oder -foto ersetzt diesen Platzhalter. Diese Seite fließt nicht in den automatischen Website-Build oder die GitHub-Pages-Veröffentlichung ein.</p>
+<section class="gv-section gv-menu" id="speisekarte" aria-label="Speisekarte">
+  <p class="gv-eyebrow">Speisekarte · Platzhalter</p>
+  <h2>So könnte Ihre Karte wirken</h2>
+  <div class="gv-menu-grid">
+    <article><h3>Vorspeisen</h3><p>Wird gemeinsam mit Ihnen zusammengestellt.</p></article>
+    <article><h3>Hauptgerichte</h3><p>Wird gemeinsam mit Ihnen zusammengestellt.</p></article>
+    <article><h3>Desserts</h3><p>Wird gemeinsam mit Ihnen zusammengestellt.</p></article>
+  </div>
+</section>
+<section class="gv-section gv-gallery" id="atmosphaere" aria-label="Atmosphäre">
+  <p class="gv-eyebrow">Atmosphäre · Platzhalter</p>
+  <h2>Platz für Ihre eigenen Fotos</h2>
+  <div class="gv-gallery-grid"><span></span><span></span><span></span></div>
+  <p class="gv-gallery-note">Echte Fotos Ihres Hauses ersetzen diese Flächen nach Freigabe.</p>
+</section>
+<section class="gv-section gv-about" id="konzept" aria-label="Konzept">
+  <p class="gv-eyebrow">Über den Auftritt</p>
+  <p>Wenn Gäste ${escapeHtml(prospect.name)} in ${escapeHtml(region)} online finden, soll der erste Eindruck genauso überzeugen wie der Besuch selbst — mit Speisekarte, Atmosphäre und einem klaren Weg zur Reservierung oder Bestellung.</p>
+  <a class="cta" href="mailto:?subject=${encodeURIComponent(`Konzeptgespräch: ${prospect.name}`)}">Konzeptgespräch anfragen</a>
+</section>
+<p class="gv-note">Diese lokale Demo ist ein unverbindlicher Gestaltungsvorschlag der Agentur. Die Abschnitte „Speisekarte" und „Atmosphäre" zeigen nur den Aufbau, den eine echte Website hätte — sie verwenden keine übernommenen Fotos, Rezensionen, Bewertungen, Preise, Öffnungszeiten, echten Gerichte oder sonstigen unbestätigten Betriebsfakten. Das Video ist ein temporäres, unternehmensfremdes Platzhaltermotiv für dieses Konzeptgespräch, kein Material dieses Betriebs, und wird nie in einer echten Kundensite oder einem veröffentlichten Build verwendet. Vor einer echten Veröffentlichung sind Inhalte, Bildrechte und Freigaben mit dem Betrieb zu klären; bestätigte Kundenfotos, eine echte Speisekarte und ein echtes Video ersetzen diese Platzhalter. Diese Seite fließt nicht in den automatischen Website-Build oder die GitHub-Pages-Veröffentlichung ein.</p>
 <script>
 (function(){
   var v = document.querySelector('[data-demo-video]');
