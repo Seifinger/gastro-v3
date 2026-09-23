@@ -8,7 +8,7 @@ export function render(briefing, tokens) {
   const sorted = [...events].sort((a, b) => a.year.localeCompare(b.year));
   const items = sorted.map((e) => `<li><span class="bp-year">${escapeHtml(e.year)}</span><p>${escapeHtml(e.text)}</p></li>`).join('');
   const html = `
-<section class="${scope}" aria-label="Geschichte">
+<section class="${scope}" aria-label="Geschichte" id="ueber-uns">
   <h2>Geschichte</h2>
   <ol>${items}</ol>
 </section>`.trim();

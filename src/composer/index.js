@@ -1,6 +1,6 @@
 import { deriveTokens } from '../tokens/index.js';
 import { blueprints } from '../blueprints/index.js';
-import { confirmed, confirmedPhotos } from '../blueprints/_shared/util.js';
+import { confirmed, confirmedPhotos, confirmedVideoUrl } from '../blueprints/_shared/util.js';
 import { meta as telCtaMeta } from './telCta.js';
 
 // Deterministic, seed-stable variety: a djb2-style hash of the briefing id
@@ -16,7 +16,7 @@ function pick(seed, options) {
 }
 
 function chooseHero(briefing, seed) {
-  const videoOk = briefing.video?.status === 'confirmed';
+  const videoOk = Boolean(confirmedVideoUrl(briefing));
   const photos = confirmedPhotos(briefing);
   const fineDining = briefing.preisklasse?.status === 'confirmed' && briefing.preisklasse.value === 'fine-dining';
   if (videoOk) return 'hero-video';

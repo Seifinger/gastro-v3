@@ -9,6 +9,7 @@ import path from 'node:path';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createDashboardApp } from './server.js';
 import { requireDashboardToken } from './auth.js';
+import { PROSPECT_DEMO_VIDEO_URL } from '../src/blueprints/_shared/util.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
@@ -182,39 +183,75 @@ export async function searchGooglePlaces(query, { key = process.env.GOOGLE_PLACE
     }));
 }
 
+// The local prospect-concept-demo hero: same cinematic dark video-hero art
+// direction as the hero-video blueprint (fullbleed video/poster, neutral
+// dark scrim, liquid-glass nav pill, top-oriented headline block), but this
+// function never goes through validateBriefing/compose/renderSite — it is a
+// separate, hand-authored page specifically so the temporary demo video
+// (PROSPECT_DEMO_VIDEO_URL) can never leak into a real customer build. No
+// confirmed USP/menu/photos exist yet for a prospect, so the copy stays a
+// neutral, non-factual concept statement, and the concept-draft marker is
+// always shown above the hero, never optional. Only the prospect's name and
+// the region derived from its address are ever interpolated — no phone
+// number, rating or review count from Google Places reaches this page.
 function renderDemoPreview(prospect) {
-  const region = prospect.adresse.split(',').at(-1)?.trim() || 'Ihrer Region';
+  const region = prospect.adresse?.split(',').at(-1)?.trim() || 'Ihrer Region';
   return `<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Konzeptentwurf · ${escapeHtml(prospect.name)}</title>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>${escapeHtml(prospect.name)} · Konzeptentwurf</title>
 <style>
-:root{--ink:#241d18;--bg:#f6f0e8;--accent:#8b432d;}
-*{box-sizing:border-box;}
-body{margin:0;font-family:Georgia,'Iowan Old Style',serif;color:var(--ink);background:var(--bg);font-size:18px;line-height:1.6;}
-header{padding:14px 5%;background:var(--ink);color:#fff;font-family:system-ui,sans-serif;font-size:13px;letter-spacing:.04em;text-align:center;}
-main{padding:11vw 8% 8vw;max-width:52rem;margin:0 auto 0 6%;}
-.kicker{font-family:system-ui,sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:13px;color:var(--accent);}
-h1{font-size:clamp(40px,8vw,96px);line-height:.98;margin:.15em 0 .3em;max-width:14ch;}
-.lead{max-width:40ch;font-size:20px;}
-.cta{display:inline-block;margin-top:32px;padding:14px 24px;background:var(--accent);color:#fff;text-decoration:none;font-family:system-ui,sans-serif;font-weight:600;border-radius:2px;}
-.cta:hover{opacity:.9;}
-.disclaimer{margin-top:64px;max-width:46rem;font-family:system-ui,sans-serif;font-size:14px;color:#5c5048;border-top:1px solid #ddd0bf;padding-top:20px;}
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;font:17px/1.6 Georgia,'Times New Roman',serif;color:#fff;background:#1b1a17}
+.gv-marker{position:relative;z-index:4;padding:10px 5vw;background:#000;color:#fff;font:600 13px/1.4 Arial,sans-serif;letter-spacing:.04em;text-align:center}
+.gv-hero{position:relative;min-height:100vh;min-height:100svh;overflow:hidden;isolation:isolate;display:flex;flex-direction:column}
+.gv-hero .gv-media{position:absolute;inset:0;z-index:-2;background:#2a2622}
+.gv-hero .gv-poster{position:absolute;inset:0;background:linear-gradient(160deg,#332d26,#1b1a17);background-size:cover;background-position:center}
+.gv-hero video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gv-hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,.1) 30%,rgba(0,0,0,.42) 68%,rgba(0,0,0,.8) 100%)}
+.gv-glass{background:rgba(18,16,14,.42);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.gv-glass{background:rgba(16,14,12,.8)}}
+.gv-nav{position:relative;z-index:3;margin:16px;padding:14px 24px;border-radius:999px;font:600 15px/1 Arial,sans-serif;width:fit-content}
+.gv-inner{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:flex-start;padding:104px 6vw 48px;max-width:640px}
+.gv-eyebrow{font:600 13px/1.4 Arial,sans-serif;text-transform:uppercase;letter-spacing:.12em;opacity:.8;margin:0 0 12px}
+.gv-hero h1{font-size:clamp(40px,8vw,84px);line-height:1.05;margin:0 0 16px}
+.gv-lead{font-size:19px;max-width:44ch;color:#f2efe8;margin:0 0 32px}
+.gv-hero .cta{display:inline-block;padding:16px 28px;background:#8b432d;color:#fff;text-decoration:none;font:600 16px/1 Arial,sans-serif;border-radius:2px;cursor:pointer}
+.gv-hero .cta:hover{background:#a04f34}
+.gv-note{padding:32px 6vw 64px;max-width:640px;font-size:15px;opacity:.85}
+:focus-visible{outline:3px solid #d98a63;outline-offset:3px}
 </style>
-</head>
-<body>
-<header>UNVERBINDLICHER KONZEPTENTWURF · NICHT DIE OFFIZIELLE WEBSITE</header>
-<main>
-  <p class="kicker">Gastronomie in ${escapeHtml(region)}</p>
-  <h1>${escapeHtml(prospect.name)}</h1>
-  <p class="lead">Ein klarer digitaler Auftritt, der Gäste vom ersten Eindruck bis zur Anfrage führt.</p>
-  <a class="cta" href="mailto:?subject=${encodeURIComponent(`Konzeptgespräch: ${prospect.name}`)}">Konzeptgespräch anfragen</a>
-  <p class="disclaimer">Diese lokale Demo ist ein unverbindlicher Gestaltungsvorschlag der Agentur. Sie verwendet keine übernommenen Fotos, Rezensionen, Bewertungen, Preise, Öffnungszeiten oder sonstigen unbestätigten Betriebsfakten. Vor einer echten Veröffentlichung sind Inhalte, Bildrechte und Freigaben mit dem Betrieb zu klären. Diese Seite fließt nicht in den automatischen Website-Build oder die GitHub-Pages-Veröffentlichung ein.</p>
-</main>
-</body>
-</html>`;
+<header class="gv-marker">UNVERBINDLICHER KONZEPTENTWURF – NICHT DIE OFFIZIELLE WEBSITE</header>
+<section class="gv-hero" aria-label="${escapeHtml(prospect.name)}">
+  <div class="gv-media">
+    <div class="gv-poster"></div>
+    <video autoplay muted loop playsinline aria-hidden="true" data-demo-video>
+      <source src="${escapeHtml(PROSPECT_DEMO_VIDEO_URL)}" type="video/mp4">
+    </video>
+  </div>
+  <p class="gv-nav gv-glass">${escapeHtml(prospect.name)}</p>
+  <div class="gv-inner">
+    <p class="gv-eyebrow">Konzeptentwurf · ${escapeHtml(region)}</p>
+    <h1>${escapeHtml(prospect.name)}</h1>
+    <p class="gv-lead">Ein klarer digitaler Auftritt, der Gäste vom ersten Eindruck bis zur Anfrage führt.</p>
+    <a class="cta" href="mailto:?subject=${encodeURIComponent(`Konzeptgespräch: ${prospect.name}`)}">Konzeptgespräch anfragen</a>
+  </div>
+</section>
+<p class="gv-note">Diese lokale Demo ist ein unverbindlicher Gestaltungsvorschlag der Agentur. Sie verwendet keine übernommenen Fotos, Rezensionen, Bewertungen, Preise, Öffnungszeiten oder sonstigen unbestätigten Betriebsfakten. Das Video ist ein temporäres, unternehmensfremdes Platzhaltermotiv für dieses Konzeptgespräch, kein Material dieses Betriebs, und wird nie in einer echten Kundensite oder einem veröffentlichten Build verwendet. Vor einer echten Veröffentlichung sind Inhalte, Bildrechte und Freigaben mit dem Betrieb zu klären; ein bestätigtes Kundenvideo oder -foto ersetzt diesen Platzhalter. Diese Seite fließt nicht in den automatischen Website-Build oder die GitHub-Pages-Veröffentlichung ein.</p>
+<script>
+(function(){
+  var v = document.querySelector('[data-demo-video]');
+  if (!v) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    v.removeAttribute('autoplay');
+    v.pause();
+    v.style.display = 'none';
+  } else {
+    v.addEventListener('error', function(){ v.style.display = 'none'; });
+  }
+})();
+</script>`;
 }
 
 export function createProspectApp() {

@@ -7,7 +7,7 @@ export function render(briefing, tokens) {
   const text = briefing.usp?.status === 'confirmed' ? briefing.usp.value
     : (briefing.konzept?.status === 'confirmed' ? briefing.konzept.value : `${briefing.name} in ${briefing.ort}.`);
   const html = `
-<section class="${scope}" aria-label="Haltung">
+<section class="${scope}" aria-label="Haltung" id="ueber-uns">
   <p>${escapeHtml(text)}</p>
 </section>`.trim();
   return { html, css: css(tokens, scope) + motion(tokens, scope) };

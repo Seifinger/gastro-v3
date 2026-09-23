@@ -7,7 +7,7 @@ export function render(briefing, tokens) {
   const items = confirmed(briefing.speisekarte) || [];
   const rows = items.map((m) => `<li><span class="bp-name">${escapeHtml(m.name)}${m.description ? `<span class="bp-desc">${escapeHtml(m.description)}</span>` : ''}</span>${m.price ? `<span class="bp-price">${escapeHtml(m.price)}</span>` : ''}</li>`).join('');
   const html = `
-<section class="${scope}" aria-label="Speisekarte">
+<section class="${scope}" aria-label="Speisekarte" id="speisekarte">
   <h2>Speisekarte</h2>
   <ul>${rows}</ul>
 </section>`.trim();
