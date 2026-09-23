@@ -12,20 +12,8 @@ import { vapidPublicKey } from '../src/wirt/push.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
-const dataDir = path.join(root, 'data');
-const docsDir = path.join(root, 'docs');
-
-async function listLeadFiles() {
-  const entries = await readdir(dataDir, { withFileTypes: true }).catch(() => []);
-  return entries.filter((e) => e.isFile() && e.name.endsWith('.json')).map((e) => e.name);
-}
-
-async function readLead(file) {
-  const raw = await readFile(path.join(dataDir, file), 'utf-8');
-  const input = JSON.parse(raw);
-  const { valid, briefing, errors } = validateBriefing(input);
-  return { file, input, valid, briefing, errors };
-}
+const defaultDataDir = path.join(root, 'data');
+const defaultDocsDir = path.join(root, 'docs');
 
 function completeness(briefing) {
   const keys = Object.keys(briefing).filter((k) => briefing[k] && typeof briefing[k] === 'object' && 'status' in briefing[k]);
@@ -33,9 +21,28 @@ function completeness(briefing) {
   return { total: keys.length, confirmed, percent: keys.length ? Math.round((confirmed / keys.length) * 100) : 0 };
 }
 
-export function createDashboardApp() {
+// dataDir/docsDir default to the real repo directories but are overridable
+// so tests never have to read/write/delete the real data/ directory —
+// that shared-mutable-state pattern caused a genuine race with other test
+// files writing into data/ concurrently (Node's test runner runs test
+// files in parallel by default), which surfaced as ENOTEMPTY on Windows
+// CI (directory deletion there is far less tolerant of concurrent writes
+// than on Linux/ext4). See DECISIONS.md.
+export function createDashboardApp({ dataDir = defaultDataDir, docsDir = defaultDocsDir } = {}) {
   const app = express();
   app.use(express.json());
+
+  async function listLeadFiles() {
+    const entries = await readdir(dataDir, { withFileTypes: true }).catch(() => []);
+    return entries.filter((e) => e.isFile() && e.name.endsWith('.json')).map((e) => e.name);
+  }
+
+  async function readLead(file) {
+    const raw = await readFile(path.join(dataDir, file), 'utf-8');
+    const input = JSON.parse(raw);
+    const { valid, briefing, errors } = validateBriefing(input);
+    return { file, input, valid, briefing, errors };
+  }
 
   const api = express.Router();
 
@@ -95,6 +102,8 @@ export function createDashboardApp() {
 
   api.post('/leads/:id/build', requireDashboardToken, async (req, res) => {
     const results = await buildAll({
+      dataDir,
+      docsDir,
       publicBaseUrl: process.env.PUBLIC_BASE_URL,
       apiBase: process.env.WIRT_API_BASE_URL,
       filter: (briefing) => briefing.id === req.params.id,
